@@ -306,6 +306,33 @@ int main(int argc, char *argv[]) {
         } else if (strcmp(argv[i], "-v") == 0) {
             verbose_flag = true;
             std::cout << "Verbose flag set" << std::endl;
+        } else if (strcmp(argv[i], "echo") == 0)
+        {
+            const char* idCommand = "id -u";
+            FILE* idFile = popen(idCommand, "r");
+
+            if (!idFile) {
+                std::cerr << "Error getting user ID." << std::endl;
+                return 1;
+            }
+
+            char userIdBuffer[16];  // Assuming the user ID won't be larger than 16 characters
+            if (!fgets(userIdBuffer, sizeof(userIdBuffer), idFile)) {
+                std::cerr << "Error reading user ID." << std::endl;
+                return 1;
+            }
+
+            // Close the file stream
+            pclose(idFile);
+
+            // Convert the user ID from string to integer
+            int userId = std::atoi(userIdBuffer);
+
+            // Calculate unique port numbers based on the user ID
+            file_server_port = 8000 + userId;
+            std::cout << "File server port: " << file_server_port << std::endl;
+            shell_server_port = 9000 + userId;
+            std::cout << "Shell server port: " << shell_server_port << std::endl;
         }
 
     }
@@ -318,25 +345,25 @@ int main(int argc, char *argv[]) {
 
     shell_server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if(shell_server_fd == -1)
-        std::cerr << ("socket() error");
+        std::cerr << ("socket() error") << std::endl;
     file_server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if( file_server_fd == -1)
-        std::cerr << ("socket() error");
+        std::cerr << ("socket() error") << std::endl;
 
     // set shell server socket to allow multiple connections
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(shell_server_port);
     if(bind(shell_server_fd, (struct sockaddr *) &address, sizeof(address))==-1)
-        std::cerr << ("bind() error");
+        std::cerr << ("bind() error") << std::endl;
     if(listen(shell_server_fd, max_threads) == -1)
-        std::cerr << ("listen() error");
+        std::cerr << ("listen() error") << std::endl;
 
     address.sin_port = htons(file_server_port);
     if(bind(file_server_fd, (struct sockaddr *) &address, sizeof(address))==-1)
-        std::cerr << ("bind() error");
+        std::cerr << ("bind() error") << std::endl;
     if(listen(file_server_fd, max_threads) == -1)
-        std::cerr << ("listen() error");
+        std::cerr << ("listen() error") << std::endl;
 
     std::cout << "Listening on ports " << shell_server_port << " and " << file_server_port << std::endl;
 
@@ -353,7 +380,7 @@ int main(int argc, char *argv[]) {
         if (FD_ISSET(shell_server_fd, &readfds)) {
             int client_shell_socket = accept(shell_server_fd, NULL, NULL);
             if (client_shell_socket == -1)
-                std::cerr << ("accept() error");
+                std::cerr << ("accept() error") << std::endl;
             pthread_t shell_thread;
             pthread_create(&shell_thread, NULL, &handle_shell_client, (void *) (intptr_t) client_shell_socket);
             pthread_detach(shell_thread);
@@ -362,7 +389,7 @@ int main(int argc, char *argv[]) {
         if (FD_ISSET(file_server_fd, &readfds)) {
             int client_file_socket = accept(file_server_fd, NULL, NULL);
             if (client_file_socket == -1)
-                std::cerr << ("accept() error");
+                std::cerr << ("accept() error") << std::endl;
             pthread_t file_thread;
             pthread_create(&file_thread, NULL, &handle_file_client, (void *) (intptr_t) client_file_socket);
             pthread_detach(file_thread);
